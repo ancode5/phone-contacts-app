@@ -84,7 +84,10 @@ async function diskRequest<T>(token: string, endpoint: string, init?: RequestIni
   }
 
   if (!response.ok) throw await parseError(response);
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204 || response.status === 202 || response.status === 201) {
+    const text = await response.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  }
 
   return (await response.json()) as T;
 }
@@ -93,9 +96,30 @@ export async function getDiskResource(token: string, path: string): Promise<Disk
   const params = new URLSearchParams({
     path: normalizeDiskPath(path),
     limit: '200',
-    fields: 'name,path,type,size,revision,modified,created,md5,sha256,_embedded.items.name,_embedded.items.path,_embedded.items.type,_embedded.items.size,_embedded.items.revision,_embedded.items.modified,_embedded.total',
+    fields:
+      'name,path,type,size,revision,modified,created,md5,sha256,_embedded.items.name,_embedded.items.path,_embedded.items.type,_embedded.items.size,_embedded.items.revision,_embedded.items.modified,_embedded.total',
   });
   return diskRequest<DiskResource>(token, `/resources?${params.toString()}`);
+}
+
+export async function diskResourceExists(token: string, path: string): Promise<boolean> {
+  try {
+    await getDiskResource(token, path);
+    return true;
+  } catch (error) {
+    if (error instanceof DiskApiError && error.status === 404) return false;
+    throw error;
+  }
+}
+
+export async function createDiskFolder(token: string, path: string): Promise<void> {
+  const params = new URLSearchParams({ path: normalizeDiskPath(path) });
+  try {
+    await diskRequest<void>(token, `/resources?${params.toString()}`, { method: 'PUT' });
+  } catch (error) {
+    if (error instanceof DiskApiError && error.status === 409) return;
+    throw error;
+  }
 }
 
 export async function getUploadLink(
@@ -119,8 +143,8 @@ export async function uploadTextFile(
   const link = await getUploadLink(token, path, overwrite);
   const response = await fetch(link.href, {
     method: link.method || 'PUT',
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: new Blob([text], { type: 'application/json; charset=utf-8' }),
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: new Blob([text], { type: 'application/octet-stream' }),
   });
 
   if (!response.ok) throw await parseError(response);
@@ -138,10 +162,14 @@ export async function downloadTextFile(token: string, path: string): Promise<str
   return response.text();
 }
 
-export async function deleteDiskResource(token: string, path: string): Promise<void> {
+export async function deleteDiskResource(
+  token: string,
+  path: string,
+  permanently = false,
+): Promise<void> {
   const params = new URLSearchParams({
     path: normalizeDiskPath(path),
-    permanently: 'false',
+    permanently: String(permanently),
   });
   await diskRequest<void>(token, `/resources?${params.toString()}`, { method: 'DELETE' });
 }

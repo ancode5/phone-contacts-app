@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   expiresAt: 'contacts_yandex_expires_at',
   oauthState: 'contacts_yandex_oauth_state',
   pkceVerifier: 'contacts_yandex_pkce_verifier',
+  returnPath: 'contacts_yandex_return_path',
   deviceId: 'contacts_yandex_device_id',
 } as const;
 
@@ -33,9 +34,7 @@ export interface YandexUserInfo {
 
 function getClientId(): string {
   const clientId = import.meta.env.VITE_YANDEX_CLIENT_ID?.trim();
-  if (!clientId) {
-    throw new Error('Не указан VITE_YANDEX_CLIENT_ID. Проверьте файл .env.local.');
-  }
+  if (!clientId) throw new Error('Не указан VITE_YANDEX_CLIENT_ID. Проверьте файл .env.local.');
   return clientId;
 }
 
@@ -48,11 +47,7 @@ export function getRedirectUri(): string {
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return window
-    .btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function createRandomString(byteLength = 48): string {
@@ -70,19 +65,19 @@ async function createCodeChallenge(verifier: string): Promise<string> {
 function getOrCreateDeviceId(): string {
   const existing = localStorage.getItem(STORAGE_KEYS.deviceId);
   if (existing) return existing;
-
   const deviceId = crypto.randomUUID();
   localStorage.setItem(STORAGE_KEYS.deviceId, deviceId);
   return deviceId;
 }
 
-export async function beginYandexAuthorization(): Promise<void> {
+export async function beginYandexAuthorization(returnPath = '/'): Promise<void> {
   const verifier = createRandomString();
   const challenge = await createCodeChallenge(verifier);
   const state = createRandomString(24);
 
   sessionStorage.setItem(STORAGE_KEYS.pkceVerifier, verifier);
   sessionStorage.setItem(STORAGE_KEYS.oauthState, state);
+  sessionStorage.setItem(STORAGE_KEYS.returnPath, returnPath.startsWith('/') ? returnPath : '/');
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -102,14 +97,10 @@ export async function beginYandexAuthorization(): Promise<void> {
 
 function saveToken(response: YandexTokenResponse): void {
   sessionStorage.setItem(STORAGE_KEYS.accessToken, response.access_token);
-
-  if (response.refresh_token) {
-    sessionStorage.setItem(STORAGE_KEYS.refreshToken, response.refresh_token);
-  }
+  if (response.refresh_token) sessionStorage.setItem(STORAGE_KEYS.refreshToken, response.refresh_token);
 
   if (response.expires_in) {
-    const expiresAt = Date.now() + response.expires_in * 1000;
-    sessionStorage.setItem(STORAGE_KEYS.expiresAt, String(expiresAt));
+    sessionStorage.setItem(STORAGE_KEYS.expiresAt, String(Date.now() + response.expires_in * 1000));
   } else {
     sessionStorage.removeItem(STORAGE_KEYS.expiresAt);
   }
@@ -120,7 +111,11 @@ async function readErrorResponse(response: Response): Promise<string> {
   if (!raw) return `${response.status} ${response.statusText}`;
 
   try {
-    const data = JSON.parse(raw) as { error?: string; error_description?: string; description?: string };
+    const data = JSON.parse(raw) as {
+      error?: string;
+      error_description?: string;
+      description?: string;
+    };
     return data.error_description || data.description || data.error || raw;
   } catch {
     return raw;
@@ -144,9 +139,7 @@ export async function finishYandexAuthorization(search: string): Promise<YandexT
   if (!expectedState || !returnedState || returnedState !== expectedState) {
     throw new Error('Проверка state не пройдена. Авторизацию нужно начать заново.');
   }
-  if (!verifier) {
-    throw new Error('Не найден PKCE code_verifier. Не закрывайте вкладку во время входа.');
-  }
+  if (!verifier) throw new Error('Не найден PKCE code_verifier. Не закрывайте вкладку во время входа.');
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -182,6 +175,12 @@ export async function finishYandexAuthorization(search: string): Promise<YandexT
   return token;
 }
 
+export function consumeAuthorizationReturnPath(): string {
+  const value = sessionStorage.getItem(STORAGE_KEYS.returnPath) || '/';
+  sessionStorage.removeItem(STORAGE_KEYS.returnPath);
+  return value.startsWith('/') ? value : '/';
+}
+
 export function getAccessToken(): string | null {
   return sessionStorage.getItem(STORAGE_KEYS.accessToken);
 }
@@ -199,6 +198,7 @@ export function clearYandexSession(): void {
   sessionStorage.removeItem(STORAGE_KEYS.expiresAt);
   sessionStorage.removeItem(STORAGE_KEYS.oauthState);
   sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier);
+  sessionStorage.removeItem(STORAGE_KEYS.returnPath);
 }
 
 export async function loadYandexUser(token = getAccessToken()): Promise<YandexUserInfo> {

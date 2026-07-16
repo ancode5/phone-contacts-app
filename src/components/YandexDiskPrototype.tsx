@@ -295,7 +295,7 @@ export function YandexDiskPrototype() {
               <button
                 type="button"
                 className="prototype-button primary"
-                onClick={() => void beginYandexAuthorization().catch((error: unknown) => window.alert(describeError(error)))}
+                onClick={() => void beginYandexAuthorization('/oauth-test').catch((error: unknown) => window.alert(describeError(error)))}
               >
                 Войти через Яндекс
               </button>

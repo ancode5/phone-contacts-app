@@ -5,12 +5,14 @@ dist
 .vscode/*
 !.vscode/extensions.json
 
-# Локальные параметры и секреты. .env.example остаётся в Git.
+# Локальные параметры и OAuth-конфигурация.
 .env
 .env.*
 !.env.example
 
-# Контактные данные, резервные копии и зашифрованные базы.
+# Контактные данные, экспорты, резервные копии и зашифрованные базы.
 *.contacts.json
 *.contacts.xlsx
+contacts_*.json
+contacts_*.xlsx
 *.enc

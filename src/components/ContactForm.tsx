@@ -1,45 +1,59 @@
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { FaTimes } from 'react-icons/fa';
-import type { Contact, ContactInput } from '../types';
+import type { Contact, ContactInput, Group, Organization } from '../types';
 
 interface ContactFormProps {
   contact?: Contact;
+  organizations: Organization[];
+  groups: Group[];
   onSave: (contact: ContactInput) => Promise<void> | void;
   onCancel: () => void;
 }
 
 const emptyContact: ContactInput = {
-  name: '',
-  phone: '',
-  email: '',
-  company: '',
+  fullName: '',
+  workPhone: '',
+  personalPhone: '',
+  workEmail: '',
+  personalEmail: '',
+  organizationId: '',
+  department: '',
+  position: '',
   notes: '',
-  tags: [],
+  groupIds: [],
   isFavorite: false,
 };
 
-export function ContactForm({ contact, onSave, onCancel }: ContactFormProps) {
+export function ContactForm({
+  contact,
+  organizations,
+  groups,
+  onSave,
+  onCancel,
+}: ContactFormProps) {
   const [formData, setFormData] = useState<ContactInput>(emptyContact);
-  const [tagsText, setTagsText] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const nextData: ContactInput = contact
-      ? {
-          name: contact.name,
-          phone: contact.phone,
-          email: contact.email,
-          company: contact.company,
-          notes: contact.notes,
-          tags: contact.tags ?? [],
-          isFavorite: contact.isFavorite,
-        }
-      : emptyContact;
-
-    setFormData(nextData);
-    setTagsText(nextData.tags.join(', '));
+    setFormData(
+      contact
+        ? {
+            fullName: contact.fullName,
+            workPhone: contact.workPhone,
+            personalPhone: contact.personalPhone,
+            workEmail: contact.workEmail,
+            personalEmail: contact.personalEmail,
+            organizationId: contact.organizationId,
+            department: contact.department,
+            position: contact.position,
+            notes: contact.notes,
+            groupIds: contact.groupIds ?? [],
+            isFavorite: contact.isFavorite,
+          }
+        : emptyContact,
+    );
     setValidationError('');
   }, [contact]);
 
@@ -47,37 +61,36 @@ export function ContactForm({ contact, onSave, onCancel }: ContactFormProps) {
     setFormData((current) => ({ ...current, [key]: value }));
   };
 
+  const toggleGroup = (groupId: string) => {
+    setFormData((current) => ({
+      ...current,
+      groupIds: current.groupIds.includes(groupId)
+        ? current.groupIds.filter((id) => id !== groupId)
+        : [...current.groupIds, groupId],
+    }));
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    const name = formData.name.trim();
-    const phone = formData.phone.trim();
-    const email = formData.email.trim();
-
-    if (!name) {
-      setValidationError('Введите имя контакта.');
+    const fullName = formData.fullName.trim();
+    if (!fullName) {
+      setValidationError('Введите ФИО контакта.');
       return;
     }
-
-    if (!phone && !email) {
-      setValidationError('Укажите хотя бы телефон или email.');
-      return;
-    }
-
-    const tags = [...new Set(tagsText.split(',').map((tag) => tag.trim()).filter(Boolean))];
 
     setValidationError('');
     setIsSaving(true);
-
     try {
       await onSave({
         ...formData,
-        name,
-        phone,
-        email,
-        company: formData.company.trim(),
+        fullName,
+        workPhone: formData.workPhone.trim(),
+        personalPhone: formData.personalPhone.trim(),
+        workEmail: formData.workEmail.trim(),
+        personalEmail: formData.personalEmail.trim(),
+        department: formData.department.trim(),
+        position: formData.position.trim(),
         notes: formData.notes.trim(),
-        tags,
       });
     } finally {
       setIsSaving(false);
@@ -87,14 +100,17 @@ export function ContactForm({ contact, onSave, onCancel }: ContactFormProps) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onCancel}>
       <section
-        className="contact-modal"
+        className="contact-modal large-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="contact-form-title"
         onMouseDown={(event: ReactMouseEvent<HTMLElement>) => event.stopPropagation()}
       >
         <div className="modal-header">
-          <h2 id="contact-form-title">{contact ? 'Редактировать контакт' : 'Новый контакт'}</h2>
+          <div>
+            <p className="eyebrow">Карточка контакта</p>
+            <h2 id="contact-form-title">{contact ? 'Редактировать контакт' : 'Новый контакт'}</h2>
+          </div>
           <button type="button" className="icon-button" onClick={onCancel} aria-label="Закрыть">
             <FaTimes aria-hidden="true" />
           </button>
@@ -102,64 +118,138 @@ export function ContactForm({ contact, onSave, onCancel }: ContactFormProps) {
 
         <form onSubmit={handleSubmit} className="contact-form">
           <label>
-            Имя <span aria-hidden="true">*</span>
+            ФИО <span aria-hidden="true">*</span>
             <input
               autoFocus
               required
-              value={formData.name}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => updateField('name', event.target.value)}
-              placeholder="Анна Смирнова"
+              value={formData.fullName}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                updateField('fullName', event.target.value)
+              }
+              placeholder="Иванов Иван Иванович"
             />
           </label>
 
           <div className="form-row">
             <label>
-              Телефон
+              Рабочий телефон
               <input
                 type="tel"
-                value={formData.phone}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => updateField('phone', event.target.value)}
-                placeholder="+31 6 1234 5678"
+                value={formData.workPhone}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  updateField('workPhone', event.target.value)
+                }
+                placeholder="+7 831 000-00-00"
               />
             </label>
-
             <label>
-              Email
+              Личный телефон
+              <input
+                type="tel"
+                value={formData.personalPhone}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  updateField('personalPhone', event.target.value)
+                }
+                placeholder="+7 900 000-00-00"
+              />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Рабочий email
               <input
                 type="email"
-                value={formData.email}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => updateField('email', event.target.value)}
-                placeholder="anna@example.com"
+                value={formData.workEmail}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  updateField('workEmail', event.target.value)
+                }
+                placeholder="work@example.ru"
+              />
+            </label>
+            <label>
+              Личный email
+              <input
+                type="email"
+                value={formData.personalEmail}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  updateField('personalEmail', event.target.value)
+                }
+                placeholder="personal@example.ru"
+              />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Место работы
+              <select
+                value={formData.organizationId}
+                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                  updateField('organizationId', event.target.value)
+                }
+              >
+                <option value="">Не выбрано</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Структурное подразделение
+              <input
+                value={formData.department}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  updateField('department', event.target.value)
+                }
+                placeholder="Отделение, кафедра, отдел"
               />
             </label>
           </div>
 
           <label>
-            Компания
+            Должность
             <input
-              value={formData.company}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => updateField('company', event.target.value)}
-              placeholder="Название компании"
+              value={formData.position}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                updateField('position', event.target.value)
+              }
+              placeholder="Должность контакта"
             />
           </label>
 
-          <label>
-            Теги
-            <input
-              value={tagsText}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setTagsText(event.target.value)}
-              placeholder="работа, клиент, семья"
-            />
-            <small>Разделяйте теги запятыми.</small>
-          </label>
+          <fieldset className="group-picker">
+            <legend>Группы</legend>
+            {groups.length === 0 ? (
+              <p className="muted-text">Группы пока не созданы. Их можно добавить в справочниках.</p>
+            ) : (
+              <div className="group-checkboxes">
+                {groups.map((group) => (
+                  <label key={group.id} className="group-check">
+                    <input
+                      type="checkbox"
+                      checked={formData.groupIds.includes(group.id)}
+                      onChange={() => toggleGroup(group.id)}
+                    />
+                    <span className="group-dot" style={{ backgroundColor: group.color }} />
+                    {group.name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </fieldset>
 
           <label>
             Заметки
             <textarea
-              rows={4}
+              rows={5}
               value={formData.notes}
-              onChange={(event: ChangeEvent<HTMLTextAreaElement>) => updateField('notes', event.target.value)}
-              placeholder="Дополнительная информация о контакте"
+              onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                updateField('notes', event.target.value)
+              }
+              placeholder="Любые дополнительные комментарии"
             />
           </label>
 
@@ -167,7 +257,9 @@ export function ContactForm({ contact, onSave, onCancel }: ContactFormProps) {
             <input
               type="checkbox"
               checked={formData.isFavorite}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => updateField('isFavorite', event.target.checked)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                updateField('isFavorite', event.target.checked)
+              }
             />
             Добавить в избранное
           </label>
