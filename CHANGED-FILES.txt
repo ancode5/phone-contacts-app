@@ -1,0 +1,20 @@
+Файлы, добавленные или изменённые для прототипа:
+
+Новые:
+- .env.example
+- .env.local (игнорируется Git)
+- README-OAUTH-PROTOTYPE.md
+- START-PROTOTYPE.cmd
+- src/auth/yandexOAuth.ts
+- src/services/yandexDisk.ts
+- src/components/YandexDiskPrototype.tsx
+- src/components/YandexDiskPrototype.css
+
+Изменённые:
+- .gitignore
+- README.md
+- src/App.tsx
+
+Основной локальный справочник по адресу / сохранён.
+Тестовая страница: http://localhost:5173/oauth-test
+OAuth callback: http://localhost:5173/auth/callback

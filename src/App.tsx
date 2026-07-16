@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { FaDownload, FaPlus, FaUpload } from 'react-icons/fa';
 import { ContactForm } from './components/ContactForm';
+import { YandexDiskPrototype } from './components/YandexDiskPrototype';
 import { ContactList } from './components/ContactList';
 import { SearchBar } from './components/SearchBar';
 import { db } from './db/database';
 import type { Contact, ContactInput } from './types';
 import './App.css';
 
-function App() {
+function ContactsApp() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFavorites, setShowFavorites] = useState(false);
@@ -203,6 +204,15 @@ function App() {
       )}
     </div>
   );
+}
+
+function App() {
+  const path = window.location.pathname;
+  if (path === '/oauth-test' || path === '/auth/callback') {
+    return <YandexDiskPrototype />;
+  }
+
+  return <ContactsApp />;
 }
 
 export default App;
