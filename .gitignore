@@ -16,3 +16,13 @@ dist
 contacts_*.json
 contacts_*.xlsx
 *.enc
+
+# Локальные резервные копии и временные установщики патчей.
+*.bak
+patch-files/
+phone-contacts-app-github-storage-patch/
+APPLY-GITHUB-STORAGE-PATCH.cmd
+apply-github-storage-patch.py
+INSTALL-FIX.cmd
+README-FIX.txt
+PATCH-INSTRUCTIONS.txt
