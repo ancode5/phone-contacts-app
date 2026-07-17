@@ -272,6 +272,26 @@ export class ContactsDatabase extends Dexie {
     });
   }
 
+  async clearTrash(): Promise<number> {
+    const trashContacts = await this.getTrashContacts();
+    if (trashContacts.length === 0) return 0;
+
+    const now = Date.now();
+    await this.transaction('rw', this.contacts, this.pendingOperations, async () => {
+      for (const contact of trashContacts) {
+        await this.contacts.put({
+          ...contact,
+          deletedAt: 1,
+          updatedAt: now,
+          version: contact.version + 1,
+        });
+        await this.recordOperation('contact', contact.id, 'delete');
+      }
+    });
+
+    return trashContacts.length;
+  }
+
   async restoreContact(id: string): Promise<void> {
     const existing = await this.contacts.get(id);
     if (!existing) return;

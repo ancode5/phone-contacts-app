@@ -423,6 +423,32 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
                 <FaTrash aria-hidden="true" />
                 {showTrash ? 'Вернуться к контактам' : `Корзина (${trashContacts.length})`}
               </button>
+
+              {showTrash && trashContacts.length > 0 && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    void (async () => {
+                      const confirmed = window.confirm(
+                        `Очистить корзину? Контактов: ${trashContacts.length}. Они исчезнут из корзины на всех устройствах, и восстановить их через интерфейс будет нельзя.`,
+                      );
+                      if (!confirmed) return;
+
+                      try {
+                        await db.clearTrash();
+                        await afterMutation();
+                      } catch (error) {
+                        setSyncStatus('error');
+                        setSyncMessage(describeError(error));
+                      }
+                    })();
+                  }}
+                >
+                  <FaTrash aria-hidden="true" />
+                  Очистить корзину
+                </button>
+              )}
               {!showTrash && (
                 <button
                   type="button"
