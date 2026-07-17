@@ -28,7 +28,7 @@ export function CatalogModal({
 }: CatalogModalProps) {
   const [organizationName, setOrganizationName] = useState('');
   const [groupName, setGroupName] = useState('');
-  const [groupColor, setGroupColor] = useState('#5b63b7');
+  const [groupColor, setGroupColor] = useState('#2f855a');
   const [isBusy, setIsBusy] = useState(false);
 
   const run = async (action: () => Promise<void>) => {

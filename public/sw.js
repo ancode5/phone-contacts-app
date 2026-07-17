@@ -1,4 +1,4 @@
-const CACHE_NAME = 'contacts-app-v2-cloud';
+const CACHE_NAME = 'contacts-app-v4-github-pages';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

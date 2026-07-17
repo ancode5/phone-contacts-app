@@ -98,7 +98,7 @@ const normalizeGroup = (value: unknown, fallbackOrder = 0): Group => {
   return {
     id: cleanText(source.id) || createId(),
     name,
-    color: cleanText(source.color) || '#5b63b7',
+    color: cleanText(source.color) || '#2f855a',
     sortOrder: toTimestamp(source.sortOrder, fallbackOrder),
     createdAt: toTimestamp(source.createdAt, now),
     updatedAt: toTimestamp(source.updatedAt, now),
@@ -363,7 +363,7 @@ export class ContactsDatabase extends Dexie {
     const group: Group = {
       id: createId(),
       name: normalizedName,
-      color: color || '#5b63b7',
+      color: color || '#2f855a',
       sortOrder: active.length,
       createdAt: now,
       updatedAt: now,

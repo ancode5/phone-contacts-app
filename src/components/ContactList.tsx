@@ -55,7 +55,7 @@ export function ContactList({
   }
 
   return (
-    <div className="contacts-grid">
+    <div className="contacts-list">
       {contacts.map((contact) => {
         const organization = organizationsById.get(contact.organizationId);
         const contactGroups = contact.groupIds
@@ -63,8 +63,8 @@ export function ContactList({
           .filter((group): group is Group => Boolean(group));
 
         return (
-          <article key={contact.id} className="contact-card">
-            <div className="contact-card-header">
+          <article key={contact.id} className="contact-row">
+            <div className="contact-identity">
               <div className="avatar" aria-hidden="true">
                 {contact.fullName.charAt(0).toLocaleUpperCase('ru') || '?'}
               </div>
@@ -85,7 +85,7 @@ export function ContactList({
               )}
             </div>
 
-            <div className="contact-details">
+            <div className="contact-column contact-communications">
               {contact.workPhone && (
                 <a href={`tel:${contact.workPhone}`}>
                   <FaPhone aria-hidden="true" />
@@ -110,6 +110,12 @@ export function ContactList({
                   <span>{contact.personalEmail}</span>
                 </a>
               )}
+              {!contact.workPhone && !contact.personalPhone && !contact.workEmail && !contact.personalEmail && (
+                <span className="empty-column">Контакты не указаны</span>
+              )}
+            </div>
+
+            <div className="contact-column contact-workplace">
               {(organization || contact.department) && (
                 <div>
                   <FaBriefcase aria-hidden="true" />
@@ -126,44 +132,48 @@ export function ContactList({
                   <span>{contact.notes}</span>
                 </div>
               )}
+              {!organization && !contact.department && !contact.notes && (
+                <span className="empty-column">Дополнительные сведения не указаны</span>
+              )}
             </div>
 
-            {contactGroups.length > 0 && (
-              <div className="tags" aria-label="Группы">
-                {contactGroups.map((group) => (
-                  <span key={group.id} style={{ borderColor: group.color }}>
-                    <i style={{ backgroundColor: group.color }} />
-                    {group.name}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="contact-meta-column">
+              {contactGroups.length > 0 && (
+                <div className="tags" aria-label="Группы">
+                  {contactGroups.map((group) => (
+                    <span key={group.id} style={{ borderColor: group.color }}>
+                      <i style={{ backgroundColor: group.color }} />
+                      {group.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="contact-date">
+                {isTrashView && contact.deletedAt
+                  ? `Удалён: ${new Date(contact.deletedAt).toLocaleDateString('ru-RU')}`
+                  : `Изменён: ${new Date(contact.updatedAt).toLocaleDateString('ru-RU')}`}
+              </p>
+            </div>
 
-            <p className="contact-date">
-              {isTrashView && contact.deletedAt
-                ? `Удалён: ${new Date(contact.deletedAt).toLocaleDateString('ru-RU')}`
-                : `Изменён: ${new Date(contact.updatedAt).toLocaleDateString('ru-RU')}`}
-            </p>
-
-            <div className="card-actions">
+            <div className="row-actions">
               {isTrashView ? (
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="secondary-button compact-action"
                   onClick={() => onRestore?.(contact.id)}
                 >
                   <FaUndo aria-hidden="true" />
                   Восстановить
                 </button>
               ) : (
-                <button type="button" className="secondary-button" onClick={() => onEdit(contact)}>
+                <button type="button" className="secondary-button compact-action" onClick={() => onEdit(contact)}>
                   <FaEdit aria-hidden="true" />
                   Изменить
                 </button>
               )}
-              <button type="button" className="danger-button" onClick={() => onDelete(contact.id)}>
+              <button type="button" className="danger-button compact-action" onClick={() => onDelete(contact.id)}>
                 <FaTrash aria-hidden="true" />
-                {isTrashView ? 'Скрыть из корзины' : 'В корзину'}
+                {isTrashView ? 'Скрыть' : 'В корзину'}
               </button>
             </div>
           </article>

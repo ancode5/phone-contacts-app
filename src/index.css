@@ -1,29 +1,30 @@
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #1d2433;
-  background: #f5f7fb;
+  color: #17352a;
+  background: #f2f7f3;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --primary: #4355b9;
-  --primary-dark: #33439d;
+  --primary: #258457;
+  --primary-dark: #17643f;
+  --primary-soft: #e7f4ec;
   --surface: #ffffff;
-  --surface-muted: #eef1f8;
-  --border: #dfe4ee;
-  --text-muted: #687085;
-  --danger: #b83a4b;
-  --success: #24845a;
-  --warning: #a96a0a;
-  --shadow: 0 16px 38px rgba(39, 51, 89, 0.09);
+  --surface-muted: #edf4ef;
+  --border: #d6e4da;
+  --text-muted: #64776d;
+  --danger: #b33c4c;
+  --success: #238356;
+  --warning: #9b6a13;
+  --shadow: 0 12px 30px rgba(24, 78, 52, 0.08);
 }
 
 * { box-sizing: border-box; }
-html { min-width: 320px; min-height: 100%; background: #f5f7fb; }
+html { min-width: 320px; min-height: 100%; background: #f2f7f3; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, textarea, select { font: inherit; }
 button, label.file-button { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, label.file-button:focus-within {
-  outline: 3px solid rgba(67, 85, 185, 0.25);
+  outline: 3px solid rgba(37, 132, 87, 0.24);
   outline-offset: 2px;
 }
 button { border: 0; }

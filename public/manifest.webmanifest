@@ -1,14 +1,14 @@
 {
-  "name": "Рабочий справочник контактов",
+  "name": "Справочник контактов",
   "short_name": "Контакты",
-  "description": "Зашифрованный рабочий справочник с синхронизацией через Яндекс Диск",
+  "description": "Зашифрованный справочник с синхронизацией через Яндекс Диск",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f5f7fb",
-  "theme_color": "#4355b9",
+  "background_color": "#f3f8f4",
+  "theme_color": "#176b3a",
   "icons": [
     {
       "src": "./icons/icon-192.png",

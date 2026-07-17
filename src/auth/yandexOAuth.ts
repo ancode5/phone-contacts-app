@@ -38,10 +38,17 @@ function getClientId(): string {
   return clientId;
 }
 
+export function getAppUrl(path = '/'): string {
+  const base = import.meta.env.BASE_URL || '/';
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const normalizedPath = path.replace(/^\/+/, '');
+  return new URL(normalizedPath, `${window.location.origin}${normalizedBase}`).toString();
+}
+
 export function getRedirectUri(): string {
   const configured = import.meta.env.VITE_YANDEX_REDIRECT_URI?.trim();
   if (configured) return configured;
-  return `${window.location.origin}/auth/callback`;
+  return getAppUrl('auth/callback');
 }
 
 function bytesToBase64Url(bytes: Uint8Array): string {

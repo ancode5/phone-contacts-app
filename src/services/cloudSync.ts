@@ -16,7 +16,8 @@ const DEFAULT_FOLDER = 'Справочник контактов';
 const DATABASE_FILENAME = 'contacts-database.enc';
 const LOCK_FILENAME = 'sync-lock.json';
 const BACKUPS_FOLDER = 'backups';
-const LOCK_TTL_MS = 90_000;
+const LOCK_TTL_MS = 25_000;
+const LOCK_RETRY_DELAYS_MS = [1_200, 1_800, 2_500];
 
 export interface SyncResult {
   revision: number;
@@ -26,6 +27,7 @@ export interface SyncResult {
 }
 
 interface SyncLock {
+  lockId?: string;
   deviceId: string;
   userLogin: string;
   createdAt: number;
@@ -38,6 +40,12 @@ const getFolderName = (): string =>
 const getDatabasePath = (): string => joinDiskPath(getFolderName(), DATABASE_FILENAME);
 const getLockPath = (): string => joinDiskPath(getFolderName(), LOCK_FILENAME);
 const getBackupsPath = (): string => joinDiskPath(getFolderName(), BACKUPS_FOLDER);
+
+let foldersReadyForToken = '';
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
 
 function getDeviceId(): string {
   const key = 'contacts_sync_device_id';
@@ -90,50 +98,85 @@ function validateCloudDatabase(value: CloudDatabase): CloudDatabase {
 }
 
 async function ensureFolders(token: string): Promise<void> {
+  if (foldersReadyForToken === token) return;
+
   const rootExists = await diskResourceExists(token, getFolderName());
   if (!rootExists) {
     throw new Error(`На Яндекс Диске не найдена общая папка «${getFolderName()}».`);
   }
   await createDiskFolder(token, getBackupsPath());
+  foldersReadyForToken = token;
 }
 
-async function acquireLock(token: string, user: YandexUserInfo): Promise<void> {
-  const now = Date.now();
-  const lock: SyncLock = {
-    deviceId: getDeviceId(),
-    userLogin: user.login,
-    createdAt: now,
-    expiresAt: now + LOCK_TTL_MS,
-  };
-
+async function readLock(token: string): Promise<Partial<SyncLock> | null> {
   try {
-    await uploadTextFile(token, getLockPath(), JSON.stringify(lock), false);
-    return;
+    return JSON.parse(await downloadTextFile(token, getLockPath())) as Partial<SyncLock>;
   } catch (error) {
-    if (!(error instanceof DiskApiError) || error.status !== 409) throw error;
+    if (error instanceof DiskApiError && error.status === 404) return null;
+    throw error;
   }
-
-  try {
-    const current = JSON.parse(await downloadTextFile(token, getLockPath())) as Partial<SyncLock>;
-    if (typeof current.expiresAt === 'number' && current.expiresAt > now) {
-      throw new Error(
-        `База сейчас синхронизируется пользователем ${current.userLogin || 'на другом устройстве'}. Повторите через минуту.`,
-      );
-    }
-  } catch (error) {
-    if (!(error instanceof DiskApiError) || error.status !== 404) {
-      if (error instanceof Error && error.message.startsWith('База сейчас')) throw error;
-    }
-  }
-
-  await uploadTextFile(token, getLockPath(), JSON.stringify(lock), true);
 }
 
-async function releaseLock(token: string): Promise<void> {
+async function acquireLock(token: string, user: YandexUserInfo): Promise<SyncLock> {
+  const deviceId = getDeviceId();
+
+  for (let attempt = 0; attempt <= LOCK_RETRY_DELAYS_MS.length; attempt += 1) {
+    const now = Date.now();
+    const lock: SyncLock = {
+      lockId: crypto.randomUUID(),
+      deviceId,
+      userLogin: user.login,
+      createdAt: now,
+      expiresAt: now + LOCK_TTL_MS,
+    };
+
+    try {
+      await uploadTextFile(token, getLockPath(), JSON.stringify(lock), false);
+      return lock;
+    } catch (error) {
+      if (!(error instanceof DiskApiError) || error.status !== 409) throw error;
+    }
+
+    const current = await readLock(token);
+    const createdAt = typeof current?.createdAt === 'number' ? current.createdAt : 0;
+    const expiresAt = typeof current?.expiresAt === 'number' ? current.expiresAt : 0;
+    const ownedByThisDevice = current?.deviceId === deviceId;
+    const staleByAge = !createdAt || now - createdAt > LOCK_TTL_MS;
+    const expired = !expiresAt || expiresAt <= now;
+
+    if (ownedByThisDevice || staleByAge || expired) {
+      try {
+        await deleteDiskResource(token, getLockPath(), true);
+      } catch (error) {
+        if (!(error instanceof DiskApiError) || error.status !== 404) throw error;
+      }
+      continue;
+    }
+
+    if (attempt < LOCK_RETRY_DELAYS_MS.length) {
+      await delay(LOCK_RETRY_DELAYS_MS[attempt]);
+      continue;
+    }
+
+    const seconds = Math.max(2, Math.ceil((expiresAt - now) / 1000));
+    throw new Error(
+      `Другой пользователь сейчас сохраняет изменения (${current?.userLogin || 'другое устройство'}). Повторите через ${seconds} сек.`,
+    );
+  }
+
+  throw new Error('Не удалось получить доступ к записи базы.');
+}
+
+async function releaseLock(token: string, lock: SyncLock): Promise<void> {
   try {
+    const current = await readLock(token);
+    if (current && current.lockId && current.lockId !== lock.lockId) return;
+    if (current && !current.lockId && current.deviceId !== lock.deviceId) return;
     await deleteDiskResource(token, getLockPath(), true);
   } catch (error) {
-    if (!(error instanceof DiskApiError) || error.status !== 404) console.warn('Не удалось удалить sync-lock:', error);
+    if (!(error instanceof DiskApiError) || error.status !== 404) {
+      console.warn('Не удалось удалить sync-lock:', error);
+    }
   }
 }
 
@@ -147,6 +190,26 @@ async function createDailyBackup(token: string, encryptedCloud: string): Promise
   }
 }
 
+function makeResult(cloud: CloudDatabase, syncedAt: number): SyncResult {
+  return {
+    revision: cloud.revision,
+    syncedAt,
+    updatedBy: cloud.updatedBy.login,
+    contactsCount: cloud.contacts.filter((contact) => contact.deletedAt === null).length,
+  };
+}
+
+async function storeCloudLocally(cloud: CloudDatabase, syncedAt: number): Promise<SyncResult> {
+  await db.replaceFromCloud(cloud);
+  await db.clearPendingOperations();
+  await db.setSyncMetadata({
+    lastSyncAt: syncedAt,
+    cloudRevision: cloud.revision,
+    lastSyncBy: cloud.updatedBy.login,
+  });
+  return makeResult(cloud, syncedAt);
+}
+
 export async function cloudDatabaseExists(token: string): Promise<boolean> {
   await ensureFolders(token);
   return diskResourceExists(token, getDatabasePath());
@@ -158,7 +221,7 @@ export async function initializeCloudDatabase(
   user: YandexUserInfo,
 ): Promise<SyncResult> {
   await ensureFolders(token);
-  await acquireLock(token, user);
+  const lock = await acquireLock(token, user);
 
   try {
     if (await diskResourceExists(token, getDatabasePath())) {
@@ -184,14 +247,9 @@ export async function initializeCloudDatabase(
       lastSyncBy: user.login,
     });
 
-    return {
-      revision: payload.revision,
-      syncedAt: now,
-      updatedBy: user.login,
-      contactsCount: payload.contacts.filter((contact) => contact.deletedAt === null).length,
-    };
+    return makeResult(payload, now);
   } finally {
-    await releaseLock(token);
+    await releaseLock(token, lock);
   }
 }
 
@@ -201,8 +259,17 @@ export async function syncWithCloud(
   user: YandexUserInfo,
 ): Promise<SyncResult> {
   await ensureFolders(token);
-  await acquireLock(token, user);
 
+  // Обычное обновление без локальных изменений выполняется только на чтение — без lock-файла.
+  const pendingCount = await db.getPendingCount();
+  if (pendingCount === 0) {
+    const encryptedCloud = await downloadTextFile(token, getDatabasePath());
+    const cloud = validateCloudDatabase(await decryptJson<CloudDatabase>(encryptedCloud, password));
+    return storeCloudLocally(cloud, Date.now());
+  }
+
+  // Блокировка нужна только на короткое время фактической записи.
+  const lock = await acquireLock(token, user);
   try {
     const encryptedCloud = await downloadTextFile(token, getDatabasePath());
     const cloud = validateCloudDatabase(await decryptJson<CloudDatabase>(encryptedCloud, password));
@@ -218,20 +285,7 @@ export async function syncWithCloud(
       entitiesEqual(groups, cloud.groups);
 
     if (cloudAlreadyContainsMergedData) {
-      await db.replaceFromCloud(cloud);
-      await db.clearPendingOperations();
-      await db.setSyncMetadata({
-        lastSyncAt: now,
-        cloudRevision: cloud.revision,
-        lastSyncBy: cloud.updatedBy.login,
-      });
-
-      return {
-        revision: cloud.revision,
-        syncedAt: now,
-        updatedBy: cloud.updatedBy.login,
-        contactsCount: cloud.contacts.filter((contact) => contact.deletedAt === null).length,
-      };
+      return storeCloudLocally(cloud, now);
     }
 
     const merged: CloudDatabase = {
@@ -246,21 +300,8 @@ export async function syncWithCloud(
 
     await createDailyBackup(token, encryptedCloud);
     await uploadTextFile(token, getDatabasePath(), await encryptJson(merged, password), true);
-    await db.replaceFromCloud(merged);
-    await db.clearPendingOperations();
-    await db.setSyncMetadata({
-      lastSyncAt: now,
-      cloudRevision: merged.revision,
-      lastSyncBy: user.login,
-    });
-
-    return {
-      revision: merged.revision,
-      syncedAt: now,
-      updatedBy: user.login,
-      contactsCount: contacts.filter((contact) => contact.deletedAt === null).length,
-    };
+    return storeCloudLocally(merged, now);
   } finally {
-    await releaseLock(token);
+    await releaseLock(token, lock);
   }
 }

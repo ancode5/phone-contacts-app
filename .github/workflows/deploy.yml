@@ -1,0 +1,56 @@
+name: Deploy contacts app to GitHub Pages
+
+on:
+  push:
+    branches:
+      - feature/cloud-sync
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    env:
+      VITE_YANDEX_CLIENT_ID: 46564f36ea254c5da1a7717f0225a625
+      VITE_YANDEX_REDIRECT_URI: https://ancode5.github.io/phone-contacts-app/
+      VITE_YANDEX_DISK_FOLDER: Справочник контактов
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check and build
+        run: npm run build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload production build
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

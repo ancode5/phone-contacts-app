@@ -3,14 +3,11 @@ import type { ChangeEvent } from 'react';
 import {
   FaBook,
   FaCloud,
-  FaCloudUploadAlt,
   FaCog,
-  FaDownload,
+  FaFileExcel,
   FaPlus,
   FaSignOutAlt,
-  FaSyncAlt,
   FaTrash,
-  FaUpload,
 } from 'react-icons/fa';
 import {
   beginYandexAuthorization,
@@ -26,6 +23,7 @@ import { ContactList } from './components/ContactList';
 import { SearchBar } from './components/SearchBar';
 import { YandexDiskPrototype } from './components/YandexDiskPrototype';
 import { db } from './db/database';
+import { exportContactsToExcel } from './services/excelExport';
 import {
   cloudDatabaseExists,
   initializeCloudDatabase,
@@ -226,10 +224,10 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     if (!silent) setSyncMessage('Синхронизация с Яндекс Диском…');
 
     try {
-      const result = await syncWithCloud(token, password, user);
+      await syncWithCloud(token, password, user);
       await loadLocalData();
       setSyncStatus('synced');
-      setSyncMessage(`Облачная ревизия ${result.revision}.`);
+      setSyncMessage('');
     } catch (error) {
       setSyncStatus('error');
       setSyncMessage(describeError(error));
@@ -239,10 +237,10 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
   }, [loadLocalData, password, token, user]);
 
   useEffect(() => {
-    void loadLocalData()
-      .then(() => syncNow(true))
-      .finally(() => setIsLoading(false));
-  }, [loadLocalData, syncNow]);
+    // Вход/разблокировка уже выполнили синхронизацию. Здесь достаточно мгновенно
+    // показать локальную Dexie-копию, не запуская второй одинаковый запрос.
+    void loadLocalData().finally(() => setIsLoading(false));
+  }, [loadLocalData]);
 
   useEffect(() => {
     const handleOnline = () => void syncNow(true);
@@ -257,7 +255,7 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibility);
-    const timer = window.setInterval(() => void syncNow(true), 60_000);
+    const timer = window.setInterval(() => void syncNow(true), 45_000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -275,7 +273,8 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
         ? 'Изменение сохранено локально и отправляется на Диск.'
         : 'Изменение сохранено локально и ожидает интернет.',
     );
-    await syncNow(true);
+    // Сохранение интерфейса не ждёт сеть: синхронизация продолжается в фоне.
+    void syncNow(true);
   };
 
   const visibleContacts = useMemo(() => {
@@ -341,82 +340,49 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     await afterMutation();
   };
 
-  const exportJson = async () => {
-    const json = await db.exportContacts();
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `contacts_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+  const exportExcel = () => {
+    exportContactsToExcel(contacts, organizations, groups);
   };
 
-  const importJson = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
+  const showSyncNotice =
+    syncStatus === 'offline' || syncStatus === 'error' || syncStatus === 'pending';
 
-    try {
-      const count = await db.importContacts(await file.text());
-      window.alert(`Импорт завершён. Обработано контактов: ${count}.`);
-      await afterMutation();
-    } catch (error) {
-      window.alert(`Не удалось импортировать файл: ${describeError(error)}`);
-    }
-  };
-
-  const syncLabel =
+  const footerStatus =
     syncStatus === 'syncing'
-      ? 'Синхронизация…'
+      ? 'Данные обновляются'
       : syncStatus === 'offline'
-        ? 'Офлайн'
+        ? 'Офлайн-режим'
         : syncStatus === 'error'
-          ? 'Ошибка синхронизации'
+          ? 'Есть ошибка обмена данными'
           : pendingCount > 0
-            ? `${pendingCount} ожидают отправки`
-            : 'Синхронизировано';
+            ? `${pendingCount} изменений ожидают отправки`
+            : 'Данные актуальны';
 
   return (
     <div className="app-shell">
       <header className="app-header cloud-header">
-        <div>
-          <p className="eyebrow">Зашифровано · Яндекс Диск · локальный кэш</p>
-          <h1>Рабочий справочник контактов</h1>
-          <p>{user.display_name || user.real_name || user.login} · {user.default_email || user.login}</p>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="header-button" onClick={() => void syncNow()}>
-            <FaSyncAlt aria-hidden="true" />
-            Обновить
-          </button>
+        <h1>Справочник контактов</h1>
+        <nav className="header-actions" aria-label="Основные действия">
           <button type="button" className="header-button" onClick={() => setShowCatalogs(true)}>
             <FaCog aria-hidden="true" />
             Справочники
           </button>
-          <button type="button" className="header-button" onClick={() => void exportJson()}>
-            <FaDownload aria-hidden="true" />
-            JSON
+          <button type="button" className="header-button" onClick={exportExcel}>
+            <FaFileExcel aria-hidden="true" />
+            Выгрузить в Excel
           </button>
-          <label className="header-button file-button">
-            <FaUpload aria-hidden="true" />
-            Импорт
-            <input type="file" accept="application/json,.json" onChange={importJson} />
-          </label>
           <button type="button" className="header-button" onClick={() => void onLogout()}>
             <FaSignOutAlt aria-hidden="true" />
             Выйти
           </button>
-        </div>
+        </nav>
       </header>
 
-      <div className={`sync-strip ${syncStatus}`}>
-        <span><FaCloudUploadAlt aria-hidden="true" /> {syncLabel}</span>
-        <span>{syncMessage || `Последняя синхронизация: ${formatSyncTime(metadata.lastSyncAt)}`}</span>
-        <span>Ревизия: {metadata.cloudRevision}</span>
-      </div>
+      {showSyncNotice && (
+        <div className={`sync-strip ${syncStatus}`}>
+          <span>{syncMessage || 'Локальные изменения будут отправлены автоматически.'}</span>
+        </div>
+      )}
 
       <main className="main-content">
         <section className="toolbar" aria-label="Управление контактами">
@@ -530,6 +496,13 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
           onClose={() => setShowCatalogs(false)}
         />
       )}
+
+      <footer className="app-footer">
+        <span>{footerStatus}</span>
+        <span>Последнее обновление: {formatSyncTime(metadata.lastSyncAt)}</span>
+        <span>Ревизия {metadata.cloudRevision}</span>
+        <span>{user.display_name || user.real_name || user.login}</span>
+      </footer>
     </div>
   );
 }
@@ -626,9 +599,25 @@ function CloudApp() {
   return <ContactsApp token={token} user={user} password={password} onLogout={logout} />;
 }
 
+function getAppRelativePath(): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const pathname = window.location.pathname;
+
+  if (base && pathname.startsWith(base)) {
+    return pathname.slice(base.length) || '/';
+  }
+
+  return pathname || '/';
+}
+
 function App() {
-  const path = window.location.pathname;
-  if (path === '/auth/callback') return <AuthCallback />;
+  const path = getAppRelativePath();
+  const search = new URLSearchParams(window.location.search);
+  const isOAuthResponse = search.has('code') || search.has('error');
+
+  // На GitHub Pages Яндекс возвращает пользователя на корень приложения с
+  // query-параметрами. Локально по-прежнему поддерживается /auth/callback.
+  if (path === '/auth/callback' || isOAuthResponse) return <AuthCallback />;
   if (path === '/oauth-test') return <YandexDiskPrototype />;
   return <CloudApp />;
 }
