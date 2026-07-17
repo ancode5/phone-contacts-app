@@ -90,7 +90,7 @@ export async function beginYandexAuthorization(returnPath = '/'): Promise<void> 
     response_type: 'code',
     client_id: getClientId(),
     redirect_uri: getRedirectUri(),
-    scope: 'cloud_api:disk.read cloud_api:disk.write login:info login:email',
+    scope: 'login:info login:email',
     force_confirm: 'yes',
     state,
     code_challenge: challenge,
