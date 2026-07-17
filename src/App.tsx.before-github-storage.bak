@@ -22,10 +22,8 @@ import { ContactForm } from './components/ContactForm';
 import { ContactList } from './components/ContactList';
 import { SearchBar } from './components/SearchBar';
 import { YandexDiskPrototype } from './components/YandexDiskPrototype';
-import { GitHubStorageGate } from './components/GitHubStorageGate';
 import { db } from './db/database';
 import { exportContactsToExcel } from './services/excelExport';
-import { clearGitHubStorageConfig, getGitHubStorageConfig } from './services/githubStorage';
 import {
   cloudDatabaseExists,
   initializeCloudDatabase,
@@ -63,8 +61,8 @@ function LoginGate({ errorMessage }: { errorMessage: string }) {
         <p className="eyebrow">Единая рабочая база</p>
         <h1>Справочник контактов</h1>
         <p>
-          Войдите через разрешённый Яндекс-аккаунт. Приложение использует Яндекс ID для входа и приватный репозиторий GitHub
-          для зашифрованной базы.
+          Войдите через разрешённый Яндекс-аккаунт. Приложение работает только с общей папкой
+          «Справочник контактов».
         </p>
         {errorMessage && <p className="form-error">{errorMessage}</p>}
         <button
@@ -74,7 +72,7 @@ function LoginGate({ errorMessage }: { errorMessage: string }) {
         >
           Войти через Яндекс
         </button>
-        <p className="gate-note">В GitHub хранится только зашифрованный файл базы; пароль в GitHub не передаётся.</p>
+        <p className="gate-note">Контакты не хранятся в GitHub и не встроены в страницу приложения.</p>
       </section>
     </main>
   );
@@ -124,7 +122,7 @@ function VaultGate({
         <h1>{cloudExists ? 'Открыть справочник' : 'Создать облачную базу'}</h1>
         <p>
           {cloudExists
-            ? 'Введите общий пароль справочника. Он не отправляется Яндексу или GitHub и не сохраняется в коде.'
+            ? 'Введите общий пароль справочника. Он не отправляется Яндексу и не хранится в GitHub.'
             : 'Придумайте общий пароль и передайте его участникам отдельно. Потерянный пароль восстановить невозможно.'}
         </p>
         <label className="gate-field">
@@ -223,7 +221,7 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
 
     syncInProgress.current = true;
     setSyncStatus('syncing');
-    if (!silent) setSyncMessage('Синхронизация с приватным репозиторием…');
+    if (!silent) setSyncMessage('Синхронизация с Яндекс Диском…');
 
     try {
       await syncWithCloud(token, password, user);
@@ -272,7 +270,7 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     setSyncStatus(navigator.onLine ? 'pending' : 'offline');
     setSyncMessage(
       navigator.onLine
-        ? 'Изменение сохранено локально и отправляется в облачное хранилище.'
+        ? 'Изменение сохранено локально и отправляется на Диск.'
         : 'Изменение сохранено локально и ожидает интернет.',
     );
     // Сохранение интерфейса не ждёт сеть: синхронизация продолжается в фоне.
@@ -510,7 +508,6 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
 }
 
 function CloudApp() {
-  const [storageConfig, setStorageConfig] = useState(() => getGitHubStorageConfig());
   const [token, setToken] = useState<string | null>(() => getAccessToken());
   const [user, setUser] = useState<YandexUserInfo | null>(null);
   const [cloudExists, setCloudExists] = useState<boolean | null>(null);
@@ -520,7 +517,7 @@ function CloudApp() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (!token || !storageConfig) return;
+    if (!token) return;
     setIsBusy(true);
     setErrorMessage('');
 
@@ -535,12 +532,10 @@ function CloudApp() {
         setToken(null);
       })
       .finally(() => setIsBusy(false));
-  }, [storageConfig, token]);
+  }, [token]);
 
   const logoutWithoutData = () => {
     clearYandexSession();
-    clearGitHubStorageConfig();
-    setStorageConfig(null);
     setToken(null);
     setUser(null);
     setPassword('');
@@ -549,30 +544,16 @@ function CloudApp() {
   };
 
   const logout = async () => {
-    if (!window.confirm('Выйти и удалить локальную копию контактов с этого устройства? Облачная база останется в приватном репозитории GitHub.')) return;
+    if (!window.confirm('Выйти и удалить локальную копию контактов с этого устройства? Облачная база останется на Яндекс Диске.')) return;
     await db.clearAllLocalData();
     logoutWithoutData();
   };
 
   if (!token) return <LoginGate errorMessage={errorMessage} />;
-
-  if (!storageConfig) {
-    return (
-      <GitHubStorageGate
-        onConnected={(config) => {
-          setStorageConfig(config);
-          setCloudExists(null);
-          setErrorMessage('');
-        }}
-        onBack={logoutWithoutData}
-      />
-    );
-  }
-
   if (isBusy || !user || cloudExists === null) {
     return (
       <main className="gate-page">
-        <section className="gate-card"><h1>Подключаем хранилище…</h1><p>Проверяем приватный репозиторий и состояние базы.</p></section>
+        <section className="gate-card"><h1>Подключаем Яндекс Диск…</h1><p>Проверяем общую папку и состояние базы.</p></section>
       </main>
     );
   }

@@ -1,8 +1,4 @@
-ЭТАП 2 — PATCH
-
-1. Остановите npm run dev (Ctrl+C).
-2. Скопируйте содержимое этой папки в корень текущего проекта.
-3. Подтвердите объединение папок и замену файлов.
-4. Не удаляйте существующий .env.local.
-5. Проверьте STAGE-2-INSTRUCTIONS.md.
-6. Запустите npm run typecheck, затем npm run dev.
+1. Сначала прочитайте GITHUB-DATA-STORAGE-INSTRUCTIONS.md.
+2. Распакуйте содержимое архива в корень проекта с заменой файлов.
+3. Запустите APPLY-GITHUB-STORAGE-PATCH.cmd.
+4. Не выполняйте git push, пока typecheck и build не завершатся успешно.
