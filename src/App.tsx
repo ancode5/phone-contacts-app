@@ -47,7 +47,7 @@ function describeError(error: unknown): string {
 }
 
 function formatSyncTime(value: number | null): string {
-  if (!value) return 'РµС‰С‘ РЅРµ РІС‹РїРѕР»РЅСЏР»Р°СЃСЊ';
+  if (!value) return 'ещё не выполнялась';
   return new Intl.DateTimeFormat('ru-RU', {
     dateStyle: 'short',
     timeStyle: 'short',
@@ -59,11 +59,11 @@ function LoginGate({ errorMessage }: { errorMessage: string }) {
     <main className="gate-page">
       <section className="gate-card">
         <div className="gate-icon"><FaBook aria-hidden="true" /></div>
-        <p className="eyebrow">Р•РґРёРЅР°СЏ СЂР°Р±РѕС‡Р°СЏ Р±Р°Р·Р°</p>
-        <h1>РЎРїСЂР°РІРѕС‡РЅРёРє РєРѕРЅС‚Р°РєС‚РѕРІ</h1>
+        <p className="eyebrow">Единая рабочая база</p>
+        <h1>Справочник контактов</h1>
         <p>
-          Р’РѕР№РґРёС‚Рµ С‡РµСЂРµР· СЂР°Р·СЂРµС€С‘РЅРЅС‹Р№ РЇРЅРґРµРєСЃ-Р°РєРєР°СѓРЅС‚. РџСЂРёР»РѕР¶РµРЅРёРµ РёСЃРїРѕР»СЊР·СѓРµС‚ РЇРЅРґРµРєСЃ ID РґР»СЏ РІС…РѕРґР° Рё РїСЂРёРІР°С‚РЅС‹Р№ СЂРµРїРѕР·РёС‚РѕСЂРёР№ GitHub
-          РґР»СЏ Р·Р°С€РёС„СЂРѕРІР°РЅРЅРѕР№ Р±Р°Р·С‹.
+          Войдите через разрешённый Яндекс-аккаунт. Приложение использует Яндекс ID для входа и приватный репозиторий GitHub
+          для зашифрованной базы.
         </p>
         {errorMessage && <p className="form-error">{errorMessage}</p>}
         <button
@@ -71,9 +71,9 @@ function LoginGate({ errorMessage }: { errorMessage: string }) {
           className="primary-button gate-action"
           onClick={() => void beginYandexAuthorization('/')}
         >
-          Р’РѕР№С‚Рё С‡РµСЂРµР· РЇРЅРґРµРєСЃ
+          Войти через Яндекс
         </button>
-        <p className="gate-note">Р’ GitHub С…СЂР°РЅРёС‚СЃСЏ С‚РѕР»СЊРєРѕ Р·Р°С€РёС„СЂРѕРІР°РЅРЅС‹Р№ С„Р°Р№Р» Р±Р°Р·С‹; РїР°СЂРѕР»СЊ РІ GitHub РЅРµ РїРµСЂРµРґР°С‘С‚СЃСЏ.</p>
+        <p className="gate-note">В GitHub хранится только зашифрованный файл базы; пароль в GitHub не передаётся.</p>
       </section>
     </main>
   );
@@ -102,11 +102,11 @@ function VaultGate({
 
   const submit = async () => {
     if (password.length < 10) {
-      setLocalError('РСЃРїРѕР»СЊР·СѓР№С‚Рµ РїР°СЂРѕР»СЊ РґР»РёРЅРѕР№ РЅРµ РјРµРЅРµРµ 10 СЃРёРјРІРѕР»РѕРІ.');
+      setLocalError('Используйте пароль длиной не менее 10 символов.');
       return;
     }
     if (!cloudExists && password !== confirmation) {
-      setLocalError('РџР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚.');
+      setLocalError('Пароли не совпадают.');
       return;
     }
 
@@ -119,15 +119,15 @@ function VaultGate({
     <main className="gate-page">
       <section className="gate-card">
         <div className="gate-icon"><FaCloud aria-hidden="true" /></div>
-        <p className="eyebrow">Р—Р°С€РёС„СЂРѕРІР°РЅРЅР°СЏ Р±Р°Р·Р°</p>
-        <h1>{cloudExists ? 'РћС‚РєСЂС‹С‚СЊ СЃРїСЂР°РІРѕС‡РЅРёРє' : 'РЎРѕР·РґР°С‚СЊ РѕР±Р»Р°С‡РЅСѓСЋ Р±Р°Р·Сѓ'}</h1>
+        <p className="eyebrow">Зашифрованная база</p>
+        <h1>{cloudExists ? 'Открыть справочник' : 'Создать облачную базу'}</h1>
         <p>
           {cloudExists
-            ? 'Р’РІРµРґРёС‚Рµ РѕР±С‰РёР№ РїР°СЂРѕР»СЊ СЃРїСЂР°РІРѕС‡РЅРёРєР°. РћРЅ РЅРµ РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РЇРЅРґРµРєСЃСѓ РёР»Рё GitHub Рё РЅРµ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ РєРѕРґРµ.'
-            : 'РџСЂРёРґСѓРјР°Р№С‚Рµ РѕР±С‰РёР№ РїР°СЂРѕР»СЊ Рё РїРµСЂРµРґР°Р№С‚Рµ РµРіРѕ СѓС‡Р°СЃС‚РЅРёРєР°Рј РѕС‚РґРµР»СЊРЅРѕ. РџРѕС‚РµСЂСЏРЅРЅС‹Р№ РїР°СЂРѕР»СЊ РІРѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ РЅРµРІРѕР·РјРѕР¶РЅРѕ.'}
+            ? 'Введите общий пароль справочника. Он не отправляется Яндексу или GitHub и не сохраняется в коде.'
+            : 'Придумайте общий пароль и передайте его участникам отдельно. Потерянный пароль восстановить невозможно.'}
         </p>
         <label className="gate-field">
-          РџР°СЂРѕР»СЊ СЃРїСЂР°РІРѕС‡РЅРёРєР°
+          Пароль справочника
           <input
             type="password"
             autoComplete="current-password"
@@ -137,7 +137,7 @@ function VaultGate({
         </label>
         {!cloudExists && (
           <label className="gate-field">
-            РџРѕРІС‚РѕСЂРёС‚Рµ РїР°СЂРѕР»СЊ
+            Повторите пароль
             <input
               type="password"
               autoComplete="new-password"
@@ -148,10 +148,10 @@ function VaultGate({
         )}
         {(localError || errorMessage) && <p className="form-error">{localError || errorMessage}</p>}
         <button type="button" className="primary-button gate-action" onClick={() => void submit()} disabled={isBusy}>
-          {isBusy ? 'РџРѕРґРіРѕС‚РѕРІРєР° Р±Р°Р·С‹вЂ¦' : cloudExists ? 'РћС‚РєСЂС‹С‚СЊ Рё СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°С‚СЊ' : 'РЎРѕР·РґР°С‚СЊ Р±Р°Р·Сѓ'}
+          {isBusy ? 'Подготовка базы…' : cloudExists ? 'Открыть и синхронизировать' : 'Создать базу'}
         </button>
         <button type="button" className="text-button" onClick={onLogout} disabled={isBusy}>
-          Р’С‹Р№С‚Рё РёР· РЇРЅРґРµРєСЃ-Р°РєРєР°СѓРЅС‚Р°
+          Выйти из Яндекс-аккаунта
         </button>
       </section>
     </main>
@@ -216,13 +216,13 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     if (syncInProgress.current) return;
     if (!navigator.onLine) {
       setSyncStatus('offline');
-      setSyncMessage('РќРµС‚ РёРЅС‚РµСЂРЅРµС‚Р°. РР·РјРµРЅРµРЅРёСЏ СЃРѕС…СЂР°РЅРµРЅС‹ РЅР° СѓСЃС‚СЂРѕР№СЃС‚РІРµ.');
+      setSyncMessage('Нет интернета. Изменения сохранены на устройстве.');
       return;
     }
 
     syncInProgress.current = true;
     setSyncStatus('syncing');
-    if (!silent) setSyncMessage('РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ РїСЂРёРІР°С‚РЅС‹Рј СЂРµРїРѕР·РёС‚РѕСЂРёРµРјвЂ¦');
+    if (!silent) setSyncMessage('Синхронизация с приватным репозиторием…');
 
     try {
       await syncWithCloud(token, password, user);
@@ -238,8 +238,8 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
   }, [loadLocalData, password, token, user]);
 
   useEffect(() => {
-    // Р’С…РѕРґ/СЂР°Р·Р±Р»РѕРєРёСЂРѕРІРєР° СѓР¶Рµ РІС‹РїРѕР»РЅРёР»Рё СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ. Р—РґРµСЃСЊ РґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РјРіРЅРѕРІРµРЅРЅРѕ
-    // РїРѕРєР°Р·Р°С‚СЊ Р»РѕРєР°Р»СЊРЅСѓСЋ Dexie-РєРѕРїРёСЋ, РЅРµ Р·Р°РїСѓСЃРєР°СЏ РІС‚РѕСЂРѕР№ РѕРґРёРЅР°РєРѕРІС‹Р№ Р·Р°РїСЂРѕСЃ.
+    // Вход/разблокировка уже выполнили синхронизацию. Здесь достаточно мгновенно
+    // показать локальную Dexie-копию, не запуская второй одинаковый запрос.
     void loadLocalData().finally(() => setIsLoading(false));
   }, [loadLocalData]);
 
@@ -247,7 +247,7 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     const handleOnline = () => void syncNow(true);
     const handleOffline = () => {
       setSyncStatus('offline');
-      setSyncMessage('РќРµС‚ РёРЅС‚РµСЂРЅРµС‚Р°. Р Р°Р±РѕС‚Р° РїСЂРѕРґРѕР»Р¶Р°РµС‚СЃСЏ СЃ Р»РѕРєР°Р»СЊРЅРѕР№ РєРѕРїРёРµР№.');
+      setSyncMessage('Нет интернета. Работа продолжается с локальной копией.');
     };
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') void syncNow(true);
@@ -271,10 +271,10 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
     setSyncStatus(navigator.onLine ? 'pending' : 'offline');
     setSyncMessage(
       navigator.onLine
-        ? 'РР·РјРµРЅРµРЅРёРµ СЃРѕС…СЂР°РЅРµРЅРѕ Р»РѕРєР°Р»СЊРЅРѕ Рё РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РІ РѕР±Р»Р°С‡РЅРѕРµ С…СЂР°РЅРёР»РёС‰Рµ.'
-        : 'РР·РјРµРЅРµРЅРёРµ СЃРѕС…СЂР°РЅРµРЅРѕ Р»РѕРєР°Р»СЊРЅРѕ Рё РѕР¶РёРґР°РµС‚ РёРЅС‚РµСЂРЅРµС‚.',
+        ? 'Изменение сохранено локально и отправляется в облачное хранилище.'
+        : 'Изменение сохранено локально и ожидает интернет.',
     );
-    // РЎРѕС…СЂР°РЅРµРЅРёРµ РёРЅС‚РµСЂС„РµР№СЃР° РЅРµ Р¶РґС‘С‚ СЃРµС‚СЊ: СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїСЂРѕРґРѕР»Р¶Р°РµС‚СЃСЏ РІ С„РѕРЅРµ.
+    // Сохранение интерфейса не ждёт сеть: синхронизация продолжается в фоне.
     void syncNow(true);
   };
 
@@ -350,43 +350,43 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
 
   const footerStatus =
     syncStatus === 'syncing'
-      ? 'Р”Р°РЅРЅС‹Рµ РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ'
+      ? 'Данные обновляются'
       : syncStatus === 'offline'
-        ? 'РћС„Р»Р°Р№РЅ-СЂРµР¶РёРј'
+        ? 'Офлайн-режим'
         : syncStatus === 'error'
-          ? 'Р•СЃС‚СЊ РѕС€РёР±РєР° РѕР±РјРµРЅР° РґР°РЅРЅС‹РјРё'
+          ? 'Есть ошибка обмена данными'
           : pendingCount > 0
-            ? `${pendingCount} РёР·РјРµРЅРµРЅРёР№ РѕР¶РёРґР°СЋС‚ РѕС‚РїСЂР°РІРєРё`
-            : 'Р”Р°РЅРЅС‹Рµ Р°РєС‚СѓР°Р»СЊРЅС‹';
+            ? `${pendingCount} изменений ожидают отправки`
+            : 'Данные актуальны';
 
   return (
     <div className="app-shell">
       <header className="app-header cloud-header">
-        <h1>РЎРїСЂР°РІРѕС‡РЅРёРє РєРѕРЅС‚Р°РєС‚РѕРІ</h1>
-        <nav className="header-actions" aria-label="РћСЃРЅРѕРІРЅС‹Рµ РґРµР№СЃС‚РІРёСЏ">
+        <h1>Справочник контактов</h1>
+        <nav className="header-actions" aria-label="Основные действия">
           <button type="button" className="header-button" onClick={() => setShowCatalogs(true)}>
             <FaCog aria-hidden="true" />
-            РЎРїСЂР°РІРѕС‡РЅРёРєРё
+            Справочники
           </button>
           <button type="button" className="header-button" onClick={exportExcel}>
             <FaFileExcel aria-hidden="true" />
-            Р’С‹РіСЂСѓР·РёС‚СЊ РІ Excel
+            Выгрузить в Excel
           </button>
           <button type="button" className="header-button" onClick={() => void onLogout()}>
             <FaSignOutAlt aria-hidden="true" />
-            Р’С‹Р№С‚Рё
+            Выйти
           </button>
         </nav>
       </header>
 
       {showSyncNotice && (
         <div className={`sync-strip ${syncStatus}`}>
-          <span>{syncMessage || 'Р›РѕРєР°Р»СЊРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ Р±СѓРґСѓС‚ РѕС‚РїСЂР°РІР»РµРЅС‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.'}</span>
+          <span>{syncMessage || 'Локальные изменения будут отправлены автоматически.'}</span>
         </div>
       )}
 
       <main className="main-content">
-        <section className="toolbar" aria-label="РЈРїСЂР°РІР»РµРЅРёРµ РєРѕРЅС‚Р°РєС‚Р°РјРё">
+        <section className="toolbar" aria-label="Управление контактами">
           {!showTrash && (
             <SearchBar
               searchQuery={searchQuery}
@@ -416,12 +416,12 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
 
           <div className="toolbar-footer">
             <p>
-              {showTrash ? 'Р’ РєРѕСЂР·РёРЅРµ' : 'РџРѕРєР°Р·Р°РЅРѕ'}: <strong>{visibleContacts.length}</strong>
+              {showTrash ? 'В корзине' : 'Показано'}: <strong>{visibleContacts.length}</strong>
             </p>
             <div className="toolbar-buttons">
               <button type="button" className="secondary-button" onClick={() => setShowTrash((current) => !current)}>
                 <FaTrash aria-hidden="true" />
-                {showTrash ? 'Р’РµСЂРЅСѓС‚СЊСЃСЏ Рє РєРѕРЅС‚Р°РєС‚Р°Рј' : `РљРѕСЂР·РёРЅР° (${trashContacts.length})`}
+                {showTrash ? 'Вернуться к контактам' : `Корзина (${trashContacts.length})`}
               </button>
               {!showTrash && (
                 <button
@@ -433,7 +433,7 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
                   }}
                 >
                   <FaPlus aria-hidden="true" />
-                  Р”РѕР±Р°РІРёС‚СЊ РєРѕРЅС‚Р°РєС‚
+                  Добавить контакт
                 </button>
               )}
             </div>
@@ -453,10 +453,10 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
           onDelete={(id) => {
             void (async () => {
               if (showTrash) {
-                if (!window.confirm('РЎРєСЂС‹С‚СЊ РєРѕРЅС‚Р°РєС‚ РёР· РєРѕСЂР·РёРЅС‹? РћРЅ РѕСЃС‚Р°РЅРµС‚СЃСЏ С‚РµС…РЅРёС‡РµСЃРєРѕР№ Р·Р°РїРёСЃСЊСЋ РґР»СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё СѓРґР°Р»РµРЅРёСЏ.')) return;
+                if (!window.confirm('Скрыть контакт из корзины? Он останется технической записью для синхронизации удаления.')) return;
                 await db.hideContactFromTrash(id);
               } else {
-                if (!window.confirm('РџРµСЂРµРјРµСЃС‚РёС‚СЊ РєРѕРЅС‚Р°РєС‚ РІ РєРѕСЂР·РёРЅСѓ РЅР° 90 РґРЅРµР№?')) return;
+                if (!window.confirm('Переместить контакт в корзину на 90 дней?')) return;
                 await db.softDeleteContact(id);
               }
               await afterMutation();
@@ -500,8 +500,8 @@ function ContactsApp({ token, user, password, onLogout }: ContactsAppProps) {
 
       <footer className="app-footer">
         <span>{footerStatus}</span>
-        <span>РџРѕСЃР»РµРґРЅРµРµ РѕР±РЅРѕРІР»РµРЅРёРµ: {formatSyncTime(metadata.lastSyncAt)}</span>
-        <span>Р РµРІРёР·РёСЏ {metadata.cloudRevision}</span>
+        <span>Последнее обновление: {formatSyncTime(metadata.lastSyncAt)}</span>
+        <span>Ревизия {metadata.cloudRevision}</span>
         <span>{user.display_name || user.real_name || user.login}</span>
       </footer>
     </div>
@@ -548,7 +548,7 @@ function CloudApp() {
   };
 
   const logout = async () => {
-    if (!window.confirm('Р’С‹Р№С‚Рё Рё СѓРґР°Р»РёС‚СЊ Р»РѕРєР°Р»СЊРЅСѓСЋ РєРѕРїРёСЋ РєРѕРЅС‚Р°РєС‚РѕРІ СЃ СЌС‚РѕРіРѕ СѓСЃС‚СЂРѕР№СЃС‚РІР°? РћР±Р»Р°С‡РЅР°СЏ Р±Р°Р·Р° РѕСЃС‚Р°РЅРµС‚СЃСЏ РІ РїСЂРёРІР°С‚РЅРѕРј СЂРµРїРѕР·РёС‚РѕСЂРёРё GitHub.')) return;
+    if (!window.confirm('Выйти и удалить локальную копию контактов с этого устройства? Облачная база останется в приватном репозитории GitHub.')) return;
     await db.clearAllLocalData();
     logoutWithoutData();
   };
@@ -571,7 +571,7 @@ function CloudApp() {
   if (isBusy || !user || cloudExists === null) {
     return (
       <main className="gate-page">
-        <section className="gate-card"><h1>РџРѕРґРєР»СЋС‡Р°РµРј С…СЂР°РЅРёР»РёС‰РµвЂ¦</h1><p>РџСЂРѕРІРµСЂСЏРµРј РїСЂРёРІР°С‚РЅС‹Р№ СЂРµРїРѕР·РёС‚РѕСЂРёР№ Рё СЃРѕСЃС‚РѕСЏРЅРёРµ Р±Р°Р·С‹.</p></section>
+        <section className="gate-card"><h1>Подключаем хранилище…</h1><p>Проверяем приватный репозиторий и состояние базы.</p></section>
       </main>
     );
   }
@@ -633,8 +633,8 @@ function App() {
   const search = new URLSearchParams(window.location.search);
   const isOAuthResponse = search.has('code') || search.has('error');
 
-  // РќР° GitHub Pages РЇРЅРґРµРєСЃ РІРѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РЅР° РєРѕСЂРµРЅСЊ РїСЂРёР»РѕР¶РµРЅРёСЏ СЃ
-  // query-РїР°СЂР°РјРµС‚СЂР°РјРё. Р›РѕРєР°Р»СЊРЅРѕ РїРѕ-РїСЂРµР¶РЅРµРјСѓ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ /auth/callback.
+  // На GitHub Pages Яндекс возвращает пользователя на корень приложения с
+  // query-параметрами. Локально по-прежнему поддерживается /auth/callback.
   if (path === '/auth/callback' || isOAuthResponse) return <AuthCallback />;
   return <CloudApp />;
 }
