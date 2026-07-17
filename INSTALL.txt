@@ -1,0 +1,12 @@
+1. Распакуйте архив в корень проекта D:\python\phone-contacts-app-fixed.
+2. Подтвердите замену README.md и src\services\excelExport.ts.
+3. Выполните:
+
+   npm run typecheck
+   npm run build
+
+4. После успешной проверки:
+
+   git add README.md src\services\excelExport.ts
+   git commit -m "Fix README and export contacts as XLSX"
+   git push origin feature/cloud-sync
