@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { JsonImportButton } from './components/JsonImportButton';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -23,7 +24,12 @@ if ('serviceWorker' in navigator && import.meta.env.DEV) {
 
 // Без StrictMode: в режиме разработки он намеренно запускает эффекты дважды,
 // что может создавать две параллельные синхронизации.
-createRoot(rootElement).render(<App />);
+createRoot(rootElement).render(
+  <>
+    <App />
+    <JsonImportButton />
+  </>,
+);
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
